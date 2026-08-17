@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'database.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 void main() => runApp(const MyApp());
 
@@ -78,10 +79,11 @@ class _HomePageState extends State<HomePage> {
           // Simple dialog to add a product
           final name = await _showTextInput(context, 'اسم المنتج');
           if (name == null || name.isEmpty) return;
-          final quantityStr = await _showTextInput(context, 'الكمية');
-          if (quantityStr == null) return;
-          final priceStr = await _showTextInput(context, 'سعر البيع');
-          if (priceStr == null) return;
+            if (!context.mounted) return;
+            final quantityStr = await _showTextInput(context, 'الكمية');
+            if (!context.mounted || quantityStr == null) return;
+            final priceStr = await _showTextInput(context, 'سعر البيع');
+            if (!context.mounted || priceStr == null) return;
           final quantity = int.tryParse(quantityStr) ?? 0;
           final price = double.tryParse(priceStr) ?? 0.0;
           await _service.addProduct(Product(
