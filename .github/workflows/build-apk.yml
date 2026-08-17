@@ -30,113 +30,12 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Verify Flutter
-        run: |
-          flutter --version
-          dart --version
-
-      - name: Configure Android
-        shell: bash
+      - name: Verify environment
         run: |
           set -e
-
-          FILE="android/app/build.gradle.kts"
-
-          if [ ! -f "$FILE" ]; then
-            echo "ERROR: $FILE not found"
-            exit 1
-          fi
-
-          python3 - <<'PY2'
-from pathlib import Path
-import re
-
-p = Path("android/app/build.gradle.kts")
-s = p.read_text()
-
-# Enable core library desugaring.
-if "isCoreLibraryDesugaringEnabled = true" not in s:
-    if "compileOptions {" not in s:
-        raise SystemExit("compileOptions block not found")
-
-    s = s.replace(
-        "compileOptions {",
-        """compileOptions {
-        isCoreLibraryDesugaringEnabled = true""",
-        1
-    )
-
-# Force Java 17.
-s = re.sub(
-    r"sourceCompatibility\s*=\s*JavaVersion\.VERSION_\d+",
-    "sourceCompatibility = JavaVersion.VERSION_17",
-    s
-)
-
-s = re.sub(
-    r"targetCompatibility\s*=\s*JavaVersion\.VERSION_\d+",
-    "targetCompatibility = JavaVersion.VERSION_17",
-    s
-)
-
-# If compatibility lines do not exist, add them.
-if "sourceCompatibility = JavaVersion.VERSION_17" not in s:
-    s = s.replace(
-        "isCoreLibraryDesugaringEnabled = true",
-        """isCoreLibraryDesugaringEnabled = true
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17""",
-        1
-    )
-
-# Kotlin JVM 17 for modern Flutter templates.
-if "jvmTarget" in s:
-    s = re.sub(
-        r"jvmTarget\s*=\s*[^\n]+",
-        "jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17",
-        s
-    )
-else:
-    kotlin_block = """
-kotlin {
-    compilerOptions {
-        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
-    }
-}
-"""
-    s += kotlin_block
-
-# Add desugaring dependency.
-dependency = (
-    'coreLibraryDesugaring('
-    '"com.android.tools:desugar_jdk_libs:2.1.5"'
-    ')'
-)
-
-if "coreLibraryDesugaring(" not in s:
-    if "dependencies {" in s:
-        s = s.replace(
-            "dependencies {",
-            f"""dependencies {{
-    {dependency}""",
-            1
-        )
-    else:
-        s += f"""
-dependencies {{
-    {dependency}
-}}
-"""
-
-p.write_text(s)
-PY2
-
-          echo "===== ANDROID CONFIGURATION ====="
-          grep -nE             "compileOptions|isCoreLibraryDesugaringEnabled|sourceCompatibility|targetCompatibility|jvmTarget|dependencies|coreLibraryDesugaring"             "$FILE"
-
-          grep -q             "isCoreLibraryDesugaringEnabled = true"             "$FILE"
-
-          grep -q             "coreLibraryDesugaring("             "$FILE"
+          flutter --version
+          dart --version
+          java -version
 
       - name: Get dependencies
         run: flutter pub get
@@ -156,6 +55,7 @@ PY2
 
           if [ ! -f "$APK" ]; then
             echo "ERROR: APK was not created"
+            find build -type f -name "*.apk" -print || true
             exit 1
           fi
 
